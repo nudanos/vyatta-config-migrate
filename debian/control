@@ -1,9 +1,15 @@
 Source: vyatta-config-migrate
-Section: contrib/net
-Priority: extra
-Maintainer: Vyatta Package Maintainers <DL-vyatta-help@att.com>
-Build-Depends: debhelper (>= 5), autotools-dev, autoconf, automake, cpio
-Standards-Version: 3.9.5
+Section: net
+Priority: optional
+Maintainer: NuDanOS Maintainers <jon@fernandez.tech>
+Build-Depends: debhelper-compat (= 13),
+ autoconf,
+ automake,
+ cpio
+Standards-Version: 4.7.2
+Rules-Requires-Root: no
+Vcs-Git: https://github.com/nudanos/vyatta-config-migrate.git
+Vcs-Browser: https://github.com/nudanos/vyatta-config-migrate
 
 Package: vyatta-config-migrate
 Architecture: all
