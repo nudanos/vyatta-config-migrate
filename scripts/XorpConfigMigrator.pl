@@ -31,19 +31,6 @@ my %actions = (
     migrate_service_webgui_1_to_0      => \&migrate_service_webgui_1_to_0,
 );
 
-# an unknown action is an error before the output is touched: written
-# out, the empty tree would replace the config
-my $migrate = $actions{ $action // q{} };
-die "Unknown action \"" . ( $action // q{} ) . "\"\n" if !$migrate;
-$migrate->($input);
-
-if ( defined($output) && $output ne q{} ) {
-    $xcp->write_file($output) or die "Cannot write $output: $!\n";
-}
-else {
-    $xcp->output_to( \*STDOUT, 0 );
-}
-
 # the DHCP options that dhcp-server 0 and 1 have in common
 my @dhcp_server_options = (
     'start',          'exclude',     'static-mapping', 'dns-server',
@@ -342,4 +329,17 @@ sub migrate_service_webgui_1_to_0 {
     $xcp->parse($file);
     move_http_port( 'webgui', 'http-port', 'http', 'port' );
     return;
+}
+
+# an unknown action is an error before the output is touched: written
+# out, the empty tree would replace the config
+my $migrate = $actions{ $action // q{} };
+die "Unknown action \"" . ( $action // q{} ) . "\"\n" if !$migrate;
+$migrate->($input);
+
+if ( defined($output) && $output ne q{} ) {
+    $xcp->write_file($output) or die "Cannot write $output: $!\n";
+}
+else {
+    $xcp->output_to( \*STDOUT, 0 );
 }

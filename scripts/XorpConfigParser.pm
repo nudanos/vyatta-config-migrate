@@ -557,9 +557,10 @@ sub _parse_value_char {
         $st->{value} .= '\\"';
         $st->{i}++;
     }
-    elsif ( defined( $st->{value} )
-        && ( ( length( $st->{value} ) > 0 ) || ( $c !~ /\s/x ) ) )
-    {
+    elsif ( ( length( $st->{value} // q{} ) > 0 ) || ( $c !~ /\s/x ) ) {
+
+        # skips the blanks before the value; unquoted values were lost
+        # while this waited for $st->{value} to be defined first
         $st->{value} .= $c;
     }
 
@@ -636,7 +637,11 @@ sub _parse_quote_or_mark {
         my $comment_text = q{};
         my $comment_end  = index( $st->{contents}, '*/', $i + 2 );
         if ( $comment_end == -1 ) {
+
+            # to the end of the file, which ends the parse; it used to
+            # stay on the "/*" and parse it again forever
             $comment_text = substr( $st->{contents}, $i + 2 );
+            $st->{i} = length( $st->{contents} );
         }
         else {
             $comment_text = substr( $st->{contents}, $i + 2, $comment_end - $i - 2 );
