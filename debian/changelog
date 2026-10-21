@@ -1,3 +1,18 @@
+vyatta-config-migrate (0.18) trixie; urgency=medium
+
+  * Code-quality lint fixes (distro docs/porting.md): analyzer findings
+    fixed, see the git log.
+  * XorpConfigParser keeps unquoted "name: value" values, and ends
+    instead of hanging on a comment left open at the end of a file.
+  * XorpConfigMigrator.pl refuses an unknown --action instead of writing
+    an empty config.
+  * Tests for the parser, the migrators and vyatta_config_migrate.pl.
+  * Depend on libnetaddr-ip-perl, which the migrators use.
+  * Drop subnet_to_interface.pl and interface_to_subnet.pl, which nothing
+    calls.
+
+ -- NuDanOS Maintainers <jon@fernandez.tech>  Wed, 21 Oct 2026 07:01:13 +0000
+
 vyatta-config-migrate (0.17) trixie; urgency=medium
 
   * Port to Debian 13 (trixie): debhelper-compat 13, Standards-Version 4.7.2, Rules-Requires-Root, NuDanOS Vcs.
