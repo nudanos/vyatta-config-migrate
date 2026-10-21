@@ -5,7 +5,8 @@ Maintainer: NuDanOS Maintainers <jon@fernandez.tech>
 Build-Depends: debhelper-compat (= 13),
  autoconf,
  automake,
- cpio
+ cpio,
+ libnetaddr-ip-perl <!nocheck>
 Standards-Version: 4.7.2
 Rules-Requires-Root: no
 Vcs-Git: https://github.com/nudanos/vyatta-config-migrate.git
@@ -13,7 +14,8 @@ Vcs-Browser: https://github.com/nudanos/vyatta-config-migrate
 
 Package: vyatta-config-migrate
 Architecture: all
-Depends: perl (>= 5.8.8),
+Depends: libnetaddr-ip-perl,
+ perl (>= 5.8.8),
  procps (>= 1:3.2.7-3),
  vyatta-cfg
 Description: Vyatta configuration migration

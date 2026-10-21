@@ -1,0 +1,89 @@
+interfaces {
+    ethernet eth0 {
+        address 192.168.1.1/24
+        description "LAN \"main\" port"
+        vif 10 {
+            address 10.0.10.1/24
+        }
+    }
+    ethernet eth1 {
+        address dhcp
+    }
+}
+service {
+    dhcp-server {
+        dynamic-DNS-update enable
+        listento {
+            interface eth0
+            interface eth0.10
+            interface eth9
+        }
+        shared-network-name GUEST {
+            authoritative disable
+            subnet 10.0.10.0/24 {
+                authoritative disable
+                start 10.0.10.10 {
+                    stop 10.0.10.50
+                }
+            }
+        }
+        shared-network-name LAN {
+            authoritative enable
+            subnet 192.168.1.0/24 {
+                authoritative enable
+                bootfile-name boot.img
+                default-router 192.168.1.1
+                ntp-server 192.168.1.5
+                start 192.168.1.100 {
+                    stop 192.168.1.199
+                }
+                static-mapping printer {
+                    ip-address 192.168.1.20
+                    mac-address 00:11:22:33:44:55
+                }
+                tftp-server-name tftp.example
+            }
+        }
+        static-mapping cam {
+            ip-address 10.0.10.7
+            mac-address 00:aa:bb:cc:dd:ee
+        }
+    }
+    dhcpv6-server {
+        listento {
+            interface eth1
+            interface eth7
+        }
+        shared-network-name V6 {
+            subnet 2001:db8::/64 {
+                static-mapping h1 {
+                    ipv6-address 2001:db8::5
+                }
+            }
+        }
+        static-mapping h2 {
+            ipv6-address 2001:db8::6
+        }
+    }
+}
+system {
+    host-name r1
+    /* a comment inside a node */
+    login {
+        user vyatta {
+            authentication {
+                encrypted-password "$6$abc;def{x}"
+            }
+        }
+    }
+    syslog {
+        global {
+        }
+    }
+    config-management {
+        commit-revisions 20
+    }
+}
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "config-management@0:dhcp-server@4:webgui@1" === */
+/* Release version: 2105 */

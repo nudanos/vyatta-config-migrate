@@ -1,0 +1,99 @@
+interfaces {
+    restore {
+    }
+    ethernet eth0 {
+        disable {
+        }
+        address 192.168.1.1 {
+            prefix-length {
+            }
+            broadcast {
+            }
+        }
+        hw-id {
+        }
+    }
+    ethernet eth1 {
+        address 10.1.0.1 {
+            prefix-length {
+            }
+        }
+    }
+}
+service {
+    dhcp {
+        relay {
+            interface eth1 {
+                server 10.9.9.9
+                relay-options {
+                    port {
+                    }
+                }
+            }
+        }
+    }
+    dhcp-relay {
+        interface eth0
+        server 10.8.8.8
+        relay-options {
+            max-size {
+            }
+        }
+    }
+    dhcp-server {
+        name LAN {
+            interface {
+            }
+            network-mask {
+            }
+            start 192.168.1.100 {
+                stop {
+                }
+            }
+            default-router {
+            }
+            dns-server 192.168.1.1
+            lease {
+            }
+            authoritative "enable"
+        }
+        name OTHER {
+            interface {
+            }
+            network-mask {
+            }
+            start 10.1.5.1 {
+                stop {
+                }
+            }
+        }
+        shared-network-name OLD {
+            192.168.1.0/24 {
+                start 192.168.1.10 {
+                    stop {
+                    }
+                }
+                domain-name "example.com"
+            }
+        }
+    }
+    http {
+        port {
+        }
+    }
+
+/*   --- CONFIGURATION COMMENTED OUT DURING MIGRATION BELOW ---
+    webgui {
+        http-port {
+        }
+    }
+     --- CONFIGURATION COMMENTED OUT DURING MIGRATION ABOVE ---  */
+
+    http {
+    }
+}
+system {
+    host-name "r1 \"quoted\""
+    ntp-server "pool.example":
+}
+/*XORP Configuration File, v1.0*/
