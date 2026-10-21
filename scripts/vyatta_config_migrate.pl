@@ -13,7 +13,8 @@
 use strict;
 use Sys::Syslog qw(:standard :macros);
 
-my $VYATTA_CONFIG_DIR = "/opt/vyatta/etc/config-migrate";
+# VYATTA_CONFIG_MIGRATE_DIR is for the tests
+my $VYATTA_CONFIG_DIR = $ENV{VYATTA_CONFIG_MIGRATE_DIR} // "/opt/vyatta/etc/config-migrate";
 my $CURRENT_VERSION_DIR = "$VYATTA_CONFIG_DIR/current";
 my $MIGRATE_DIR = "$VYATTA_CONFIG_DIR/migrate";
 

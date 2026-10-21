@@ -1,0 +1,13 @@
+system {
+    host-name r1
+}
+
+
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "broken@1:config-management@1:dhcp-server@5:newmod@2:webgui@0" === */
+/* Release version: 2105 */
+/* ran broken 0-to-1 */
+/* ran config-management 0-to-1 */
+/* ran dhcp-server 4-to-5 */
+/* ran newmod 1-to-2 */
+/* ran webgui 1-to-0 */
