@@ -6,12 +6,13 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-
-use lib "/opt/vyatta/share/perl5/";
-
 package XorpConfigParser;
 
 use strict;
+use warnings;
+use Carp;
+use Symbol qw(qualify_to_ref);
+
 my %data;
 
 my %fields = ( _data => \%data );
@@ -43,7 +44,7 @@ sub copy_node {
 
     foreach my $node (@$from) {
         my $stringNodeNameHere = $node->{'name'};
-        if ( $stringNodeNameHere =~ /^$name.*/ ) {
+        if ( $stringNodeNameHere =~ /^$name.*/x ) {
             foreach my $nodeCheck (@$to) {
                 my $stringCheck = $nodeCheck->{'name'};
                 if ( $name eq $stringCheck ) {
@@ -57,6 +58,7 @@ sub copy_node {
             push( @$to, $node );
         }
     }
+    return;
 }
 
 #
@@ -75,7 +77,7 @@ sub copy_multis {
 
     foreach my $node (@$nodes) {
         my $stringNodeNameHere = $node->{'name'};
-        if ( $stringNodeNameHere =~ /$name\s(\S+)/ ) {
+        if ( $stringNodeNameHere =~ /$name\s(\S+)/x ) {
             my $stringNameHere = $1;
             my %multi          = (
                 'name'     => $stringNameHere,
@@ -113,6 +115,7 @@ sub comment_out_child {
             }
         }
     }
+    return;
 }
 
 #
@@ -127,6 +130,7 @@ sub comment_out_node {
     }
 
     $node->{'comment_out'} = "1";
+    return;
 }
 
 #
@@ -154,31 +158,34 @@ sub create_node {
             next unless $name;
 
             if ( $name eq $segment ) {
-                $hash = $child;		# record insertion point
+                $hash = $child;    # record insertion point
                 next SEGMENT;
             }
         }
 
         my %new_hash = ( 'name' => $segment );
 
-	if ($hash != \%data) {
-	    # insertion in subtree
-	    push @$children, \%new_hash;
-	} else {
-	    # special case for insertion at top put new before version comment
-	    my @comments;
-	    while (my $child = pop @$children) {
-		if ($child->{'comment'}) {
-		    unshift @comments, $child;
-		} else {
-		    push @$children, $child;
-		    last;
-		}
-	    }
+        if ( $hash != \%data ) {
 
-	    push @$children, \%new_hash;
-	    push @$children, @comments;
-	}
+            # insertion in subtree
+            push @$children, \%new_hash;
+        }
+        else {
+            # special case for insertion at top put new before version comment
+            my @comments;
+            while ( my $child = pop @$children ) {
+                if ( $child->{'comment'} ) {
+                    unshift @comments, $child;
+                }
+                else {
+                    push @$children, $child;
+                    last;
+                }
+            }
+
+            push @$children, \%new_hash;
+            push @$children, @comments;
+        }
         $hash = \%new_hash;
     }
     return $hash;
@@ -201,6 +208,7 @@ sub delete_child {
             @$children[$i] = undef;
         }
     }
+    return;
 }
 
 #
@@ -351,7 +359,7 @@ sub push_comment {
         }
     }
 
-    my %new_comment = ( 'comment' => $comment );
+    my %new_comment  = ( 'comment' => $comment );
     my $childrenPush = $hash->{'children'};
     if ( !defined($childrenPush) ) {
         my @new_children;
@@ -359,6 +367,7 @@ sub push_comment {
         $childrenPush = \@new_children;
     }
     push( @$childrenPush, \%new_comment );
+    return;
 }
 
 #
@@ -374,6 +383,7 @@ sub set_value {
     if ( defined($hash) ) {
         $hash->{'value'} = $value;
     }
+    return;
 }
 
 #
@@ -388,11 +398,12 @@ sub set_disable {
     if ( defined($hash) ) {
         $hash->{'disable'} = 'true';
     }
+    return;
 }
 
 #
 # This method is used to generate the output of the node tree in the XORP config
-# file format.  The output is printed out to currently selected standard out.
+# file format.  The output is printed out to the currently selected handle.
 #
 #  $depth	Number of indents, used when this method calls itself
 #               recursively, should be 0 when used.
@@ -402,61 +413,80 @@ sub set_disable {
 sub output {
     my ( $self, $depth, $hash ) = @_;
 
+    $self->output_to( qualify_to_ref(select), $depth, $hash );
+    return;
+}
+
+#
+# The same as output(), to the file handle $fh.
+#
+sub output_to {
+    my ( $self, $fh, $depth, $hash ) = @_;
+
     $hash = $self->{_data} unless $hash;
 
     my $comment = $hash->{'comment'};
-    print '/*' . $comment . "*/\n"
+    print {$fh} '/*' . $comment . "*/\n"
       if $comment;
 
     my $children = $hash->{'children'};
     foreach my $child (@$children) {
         next unless $child;
-        my $name = $child->{'name'};
-
         my $comment_out = $child->{'comment_out'};
         if ($comment_out) {
-            print "\n";
-            print "/*   --- $comment_out ---   */\n"
+            print {$fh} "\n";
+            print {$fh} "/*   --- $comment_out ---   */\n"
               if ( $comment_out ne "1" );
-            print
-"/*   --- CONFIGURATION COMMENTED OUT DURING MIGRATION BELOW ---\n";
+            print {$fh} "/*   --- CONFIGURATION COMMENTED OUT DURING MIGRATION BELOW ---\n";
         }
 
-        print "    " x $depth;
-        my $value = $child->{'value'};
-        if ($value) {
-            print "$name $value";
-            print "\n";
-        }
-        else {
-            my $print_brackets = 0;
-            my $children       = $child->{'children'};
-            if ( defined($children) && @$children > 0 ) {
-                $print_brackets = 1;
-            }
-            elsif ( defined($name) && !( $name =~ /\s/ ) ) {
-                $print_brackets = 1;
-            }
+        print {$fh} "    " x $depth;
+        $self->_output_node( $fh, $depth, $child );
 
-            if ($name) {
-                print "$name";
-                if ($print_brackets) {
-                    print " {";
-                }
-                print "\n";
-            }
-
-            $self->output( $depth + 1, $child );
-            if ($print_brackets) {
-                print "    " x $depth;
-                print "}\n";
-            }
-        }
-
-        print
-"     --- CONFIGURATION COMMENTED OUT DURING MIGRATION ABOVE ---  */\n\n"
+        print {$fh} "     --- CONFIGURATION COMMENTED OUT DURING MIGRATION ABOVE ---  */\n\n"
           if ($comment_out);
     }
+    return;
+}
+
+# One node of output_to(), after its indent: "name value", or the name and
+# its subtree in brackets.
+sub _output_node {
+    my ( $self, $fh, $depth, $node ) = @_;
+    my $name  = $node->{'name'};
+    my $value = $node->{'value'};
+
+    if ($value) {
+        print {$fh} "$name $value\n";
+        return;
+    }
+
+    my $subtree        = $node->{'children'};
+    my $print_brackets = ( defined($subtree) && @$subtree > 0 )
+      || ( defined($name) && $name !~ /\s/x );
+
+    if ($name) {
+        print {$fh} $print_brackets ? "$name {\n" : "$name\n";
+    }
+
+    $self->output_to( $fh, $depth + 1, $node );
+    if ($print_brackets) {
+        print {$fh} "    " x $depth;
+        print {$fh} "}\n";
+    }
+    return;
+}
+
+#
+# Writes the node tree to the file $path, as output() would; returns false
+# if it cannot.
+#
+sub write_file {
+    my ( $self, $path ) = @_;
+
+    open my $fh, '>', $path or return;
+    $self->output_to( $fh, 0 );
+    return close $fh;
 }
 
 #
@@ -471,156 +501,175 @@ sub parse {
     %data = ();
 
     open my $in, '<', $file
-      or die "Error!  Unable to open file \"$file\".  $!";
-
-    my $contents = "";
-    while (<$in>) {
-        $contents .= $_;
-    }
+      or croak "Error!  Unable to open file \"$file\".  $!";
+    my $contents = do { local $/ = undef; <$in> }
+      // q{};
     close $in;
 
-    my @array_contents = split( '', $contents );
-
-    #	print scalar(@array_contents) . "\n";
-
-    my $length_contents = @array_contents;
-    my $colon           = 0;
-    my $colon_quote     = 0;
-    my $in_quote        = 0;
-    my $name            = '';
-    my $value           = undef;
-    my $disable         = undef;
-    my @path;
-    my %tree;
-
-    for ( my $i = 0 ; $i < $length_contents ; ) {
-        my $c     = $array_contents[$i];
-        my $cNext = $array_contents[ $i + 1 ];
-
-        if ( $colon == 1 ) {
-            my $value_end = 0;
-            if ( $c eq '"' ) {
-                $value .= $c;
-                if ( $colon_quote == 1 ) {
-                    $value_end = 1;
-                }
-                else {
-                    $colon_quote = 1;
-                }
-            }
-            elsif ( $c eq '\\' && $cNext eq '"' ) {
-                $value .= '\\"';
-                $i++;
-            }
-            elsif ( defined($value) ) {
-                if ( ( length($value) > 0 ) || ( !( $c =~ /\s/ ) ) ) {
-                    $value .= $c;
-                }
-            }
-
-            if ( $colon_quote == 0
-                && ( $cNext eq '}' || $cNext eq ';' || $cNext =~ /\s/ ) )
-            {
-                $value_end = 1;
-            }
-            $i++;
-
-            if ( $value_end == 1 ) {
-                if ( length($value) > 0 ) {
-
-                    #					print "Path is: \"@path\"    Value is: $value\n";
-                    $self->set_value( \@path, $value );
-                    $value = undef;
-                }
-                pop(@path);
-                $colon_quote = 0;
-                $colon       = 0;
-            }
-            next;
-        }
-
-        # ! $colon
-        # check for quotes
-        if ( $c eq '"' ) {
-            if ($in_quote) {
-                $in_quote = 0;
-            }
-            else {
-                $in_quote = 1;
-            }
-            $name .= '"';
-            $i++;
-            next;
-        }
-        elsif ( $c eq '\\' && $cNext eq '"' ) {
-            $name .= '\\"';
-            $i += 2;
-            next;
-        }
-
-	if ( !$in_quote && $c eq '!' && $cNext eq ' ') {
-	    $disable = 'true';
-	    $i += 2;
-	}
-        elsif ( !$in_quote && $c eq '/' && $cNext eq '*' ) {
-            my $comment_text = '';
-            my $comment_end = index( $contents, '*/', $i + 2 );
-            if ( $comment_end == -1 ) {
-                $comment_text = substr( $contents, $i + 2 );
-            }
-            else {
-                $comment_text =
-                  substr( $contents, $i + 2, $comment_end - $i - 2 );
-                $i = $comment_end + 2;
-            }
-
-            #			print 'Comment is: "' . $comment_text . "\"\n";
-            $self->push_comment( \@path, $comment_text );
-        }
-        elsif (( !$in_quote && $c eq '{' )
-            || ( $c eq ':' && !( $name =~ /\s/ ) )
-            || $c eq "\n" )
-        {
-            $name =~ s/^\s+|\s$//g;
-
-            if ( length($name) > 0 ) {
-                push( @path, $name );
-
-		if (defined $disable && $disable eq 'true') {
-                $self->set_disable(\@path);
-                $disable = undef;
-            }
-
-                #				print "Path is: \"@path\"    Name is: \"$name\"\n";
-                $self->set_value( \@path, $value );
-                $name = '';
-
-                if ( $c eq "\n" ) {
-                    pop(@path);
-                }
-                if ( $c eq ':' ) {
-                    $colon = 1;
-                }
-            }
-
-            $i++;
-        }
-        elsif ( !$in_quote && $c eq '}' ) {
-            pop(@path);
-            $name = '';
-            $disable = undef;
-            $i++;
-        }
-        elsif ( !$in_quote && $c eq ';' ) {
-            $i++;
+    # the parser's state, moved along a character at a time
+    my $st = {
+        contents    => $contents,
+        chars       => [ split( //, $contents ) ],
+        i           => 0,
+        colon       => 0,                            # in the value after "name:"
+        colon_quote => 0,                            # in a quoted value after "name:"
+        in_quote    => 0,
+        name        => q{},
+        value       => undef,
+        disable     => undef,                        # 'true' after "! "
+        path        => [],
+    };
+    my $length_contents = @{ $st->{chars} };
+    while ( $st->{i} < $length_contents ) {
+        if ( $st->{colon} ) {
+            $self->_parse_value_char($st);
         }
         else {
-            if ( ( length($name) > 0 ) || ( !( $c =~ /\s/ ) ) ) {
-                $name .= $c;
-            }
-            $i++;
+            $self->_parse_name_char($st);
         }
     }
+    return;
+}
+
+# parse(): the character at $st->{i} and the one after it
+sub _chars_at {
+    my ($st) = @_;
+    my $i = $st->{i};
+    return ( $st->{chars}[$i], $st->{chars}[ $i + 1 ] // q{} );
+}
+
+# parse(): a character of the value after "name:"
+sub _parse_value_char {
+    my ( $self, $st )    = @_;
+    my ( $c,    $cNext ) = _chars_at($st);
+
+    my $value_end = 0;
+    if ( $c eq '"' ) {
+        $st->{value} .= $c;
+        if ( $st->{colon_quote} == 1 ) {
+            $value_end = 1;
+        }
+        else {
+            $st->{colon_quote} = 1;
+        }
+    }
+    elsif ( $c eq '\\' && $cNext eq '"' ) {
+        $st->{value} .= '\\"';
+        $st->{i}++;
+    }
+    elsif ( defined( $st->{value} )
+        && ( ( length( $st->{value} ) > 0 ) || ( $c !~ /\s/x ) ) )
+    {
+        $st->{value} .= $c;
+    }
+
+    if ( $st->{colon_quote} == 0
+        && ( $cNext eq '}' || $cNext eq ';' || $cNext =~ /\s/x ) )
+    {
+        $value_end = 1;
+    }
+    $st->{i}++;
+
+    return if !$value_end;
+    if ( length( $st->{value} // q{} ) > 0 ) {
+        $self->set_value( $st->{path}, $st->{value} );
+        $st->{value} = undef;
+    }
+    pop( @{ $st->{path} } );
+    $st->{colon_quote} = 0;
+    $st->{colon}       = 0;
+    return;
+}
+
+# parse(): a character outside a "name:" value
+sub _parse_name_char {
+    my ( $self, $st )    = @_;
+    my ( $c,    $cNext ) = _chars_at($st);
+
+    return if $self->_parse_quote_or_mark( $st, $c, $cNext );
+
+    my $in_quote = $st->{in_quote};
+    if (   ( !$in_quote && $c eq '{' )
+        || ( $c eq ':' && $st->{name} !~ /\s/x )
+        || $c eq "\n" )
+    {
+        $self->_end_name( $st, $c );
+    }
+    elsif ( !$in_quote && $c eq '}' ) {
+        pop( @{ $st->{path} } );
+        $st->{name}    = q{};
+        $st->{disable} = undef;
+    }
+    elsif (( $in_quote || $c ne ';' )
+        && ( ( length( $st->{name} ) > 0 ) || ( $c !~ /\s/x ) ) )
+    {
+        $st->{name} .= $c;
+    }
+    $st->{i}++;
+    return;
+}
+
+# parse(): quotes, "! " and comments; returns true if it took the character
+sub _parse_quote_or_mark {
+    my ( $self, $st, $c, $cNext ) = @_;
+
+    if ( $c eq '"' ) {
+        $st->{in_quote} = $st->{in_quote} ? 0 : 1;
+        $st->{name} .= '"';
+        $st->{i}++;
+        return 1;
+    }
+    if ( $c eq '\\' && $cNext eq '"' ) {
+        $st->{name} .= '\\"';
+        $st->{i} += 2;
+        return 1;
+    }
+    return 0 if $st->{in_quote};
+
+    if ( $c eq '!' && $cNext eq ' ' ) {
+        $st->{disable} = 'true';
+        $st->{i} += 2;
+        return 1;
+    }
+    if ( $c eq '/' && $cNext eq '*' ) {
+        my $i            = $st->{i};
+        my $comment_text = q{};
+        my $comment_end  = index( $st->{contents}, '*/', $i + 2 );
+        if ( $comment_end == -1 ) {
+            $comment_text = substr( $st->{contents}, $i + 2 );
+        }
+        else {
+            $comment_text = substr( $st->{contents}, $i + 2, $comment_end - $i - 2 );
+            $st->{i} = $comment_end + 2;
+        }
+        $self->push_comment( $st->{path}, $comment_text );
+        return 1;
+    }
+    return 0;
+}
+
+# parse(): the end of a node name, at "{", "name:" or the end of a line
+sub _end_name {
+    my ( $self, $st, $c ) = @_;
+
+    $st->{name} =~ s/^\s+|\s$//gx;
+    return if length( $st->{name} ) == 0;
+
+    push( @{ $st->{path} }, $st->{name} );
+    if ( defined $st->{disable} && $st->{disable} eq 'true' ) {
+        $self->set_disable( $st->{path} );
+        $st->{disable} = undef;
+    }
+    $self->set_value( $st->{path}, $st->{value} );
+    $st->{name} = q{};
+
+    if ( $c eq "\n" ) {
+        pop( @{ $st->{path} } );
+    }
+    if ( $c eq ':' ) {
+        $st->{colon} = 1;
+    }
+    return;
 }
 
 1;

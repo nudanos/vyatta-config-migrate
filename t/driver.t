@@ -1,3 +1,4 @@
+#!/usr/bin/perl
 # Copyright (c) 2026, NuDanOS contributors.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -36,7 +37,8 @@ sub script {
     return;
 }
 
-make_path( "$mig/current", map { "$mig/migrate/$_" } qw(broken config-management dhcp-server newmod webgui) );
+make_path( "$mig/current",
+    map { "$mig/migrate/$_" } qw(broken config-management dhcp-server newmod webgui) );
 touch("$mig/current/$_") for qw(broken@1 config-management@1 dhcp-server@5 newmod@2 webgui@0);
 
 # each script notes that it ran in the config
@@ -59,12 +61,12 @@ is( $status >> 8, 1, 'exits 1 when a migration script fails' );
 is_golden( slurp($config), 'driver.migrated', 'scripts ran and the version string is current' );
 
 my @backups = glob "$config.*.pre-migration";
-is( scalar @backups, 1, 'one backup' );
+is( scalar @backups,      1,                              'one backup' );
 is( slurp( $backups[0] ), slurp( data('driver.config') ), 'the backup is the original' );
 
 copy( data('driver.migrated'), $config ) or die "copy: $!\n";
 $status = system( $^X, "$root/scripts/vyatta_config_migrate.pl", $config );
-is( $status >> 8, 0, 'exits 0 with nothing to migrate' );
+is( $status >> 8,   0,                                'exits 0 with nothing to migrate' );
 is( slurp($config), slurp( data('driver.migrated') ), 'a current config is left alone' );
 
 done_testing();

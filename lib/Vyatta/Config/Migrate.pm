@@ -27,9 +27,8 @@ use base qw(Exporter);
 
 use vars qw( @EXPORT_OK $VERSION );
 
-@EXPORT_OK =
-  qw(migrate for_each_subnode for_each_subnode_with_match find_nodes find_leafs);
-$VERSION = 1.00;
+@EXPORT_OK = qw(migrate for_each_subnode for_each_subnode_with_match find_nodes find_leafs);
+$VERSION   = 1.00;
 
 # Returns a list of the child nodes of $node whose name starts with $prefix.
 sub find_nodes {
@@ -52,14 +51,12 @@ sub find_nodes {
 sub find_leafs {
     my ( $xcp, $path, $root, @branches ) = @_;
     my @node_path = @{$path}[ 0 .. $#{$path} - 1 ];
-    my @nodes = ( { node => $root, path => \@node_path } );
+    my @nodes     = ( { node => $root, path => \@node_path } );
 
     foreach my $branch (@branches) {
         my @child_nodes = ();
         foreach my $node (@nodes) {
-            foreach
-              my $child_node ( find_nodes( $xcp, $node->{node}, $branch ) )
-            {
+            foreach my $child_node ( find_nodes( $xcp, $node->{node}, $branch ) ) {
                 my $child_path = [ @{ $node->{path} }, $node->{node}->{name} ];
                 push @child_nodes,
                   {
@@ -122,9 +119,7 @@ sub migrate {
 
     my ( $tmp, $tmpname ) = tempfile('/tmp/vyatta_migrate.XXXX');
 
-    select $tmp;
-    $xcp->output(0);
-    select STDOUT;
+    $xcp->output_to( $tmp, 0 );
     close $tmp
       or croak "Failed to close $tmpname successfully: $ERRNO";
 

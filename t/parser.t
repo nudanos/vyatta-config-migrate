@@ -1,3 +1,4 @@
+#!/usr/bin/perl
 # Copyright (c) 2026, NuDanOS contributors.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -20,9 +21,9 @@ for my $name (qw(dhcp xorp)) {
 
     # output() writes to the selected handle; callers in other packages
     # select a file first
-    my $old = select $fh;  ## no critic (InputOutput::ProhibitOneArgSelect) reason: the interface under test
+    my $old = select $fh;    ## no critic (InputOutput::ProhibitOneArgSelect) reason: the interface under test
     $xcp->output(0);
-    select $old;           ## no critic (InputOutput::ProhibitOneArgSelect) reason: the interface under test
+    select $old;             ## no critic (InputOutput::ProhibitOneArgSelect) reason: the interface under test
     close $fh or die "$!\n";
     is_golden( $got, "$name.parsed", "$name.config round trip" );
 }

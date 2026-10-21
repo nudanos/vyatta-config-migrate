@@ -9,7 +9,7 @@ package Golden;
 
 use strict;
 use warnings;
-use parent qw(Exporter);
+use parent     qw(Exporter);
 use File::Copy qw(copy);
 use File::Temp qw(tempdir);
 use FindBin;
@@ -52,8 +52,7 @@ sub run_migrator {
     copy( data($input), $file ) or die "copy: $!\n";
     my @args = map { s/FILE/$file/xr } @cmd;
     push @args, $file unless grep { /FILE/x } @cmd;
-    local $ENV{PERL5LIB} = join ':', "$root/scripts", "$root/lib",
-      ( $ENV{PERL5LIB} // () );
+    local $ENV{PERL5LIB} = join ':', "$root/scripts", "$root/lib", ( $ENV{PERL5LIB} // () );
     my $status = system { $args[0] } @args;
     return ( slurp($file), $status );
 }

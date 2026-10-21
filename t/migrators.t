@@ -1,3 +1,4 @@
+#!/usr/bin/perl
 # Copyright (c) 2026, NuDanOS contributors.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -14,18 +15,16 @@ use Golden qw(is_golden run_migrator);
 my $root = "$FindBin::Bin/..";
 
 for my $step (qw(3-to-2 3-to-4 4-to-3 4-to-5 5-to-4)) {
-    my ( $got, $status ) =
-      run_migrator( 'dhcp.config', $^X, "$root/migrate/dhcp-server/$step" );
+    my ( $got, $status ) = run_migrator( 'dhcp.config', $^X, "$root/migrate/dhcp-server/$step" );
     is( $status, 0, "dhcp-server $step exits 0" );
     is_golden( $got, "dhcp.dhcp-server-$step", "dhcp-server $step" );
 }
 
 {
-    my ( $got, $status ) = run_migrator( 'dhcp.config', $^X,
-        "$root/migrate/config-management/0-to-1" );
+    my ( $got, $status ) =
+      run_migrator( 'dhcp.config', $^X, "$root/migrate/config-management/0-to-1" );
     is( $status, 0, 'config-management 0-to-1 exits 0' );
-    is_golden( $got, 'dhcp.config-management-0-to-1',
-        'config-management 0-to-1' );
+    is_golden( $got, 'dhcp.config-management-0-to-1', 'config-management 0-to-1' );
 }
 
 for my $action (
@@ -34,10 +33,8 @@ for my $action (
     webgui_0_to_1 webgui_1_to_0)
   )
 {
-    my ( $got, $status ) = run_migrator(
-        'xorp.config', $^X, "$root/scripts/XorpConfigMigrator.pl",
-        '--input=FILE', '--output=FILE', "--action=migrate_service_$action"
-    );
+    my ( $got, $status ) = run_migrator( 'xorp.config', $^X, "$root/scripts/XorpConfigMigrator.pl",
+        '--input=FILE', '--output=FILE', "--action=migrate_service_$action" );
     is( $status, 0, "XorpConfigMigrator $action exits 0" );
     is_golden( $got, "xorp.$action", "XorpConfigMigrator $action" );
 }

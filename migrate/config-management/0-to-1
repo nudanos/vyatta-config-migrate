@@ -6,7 +6,6 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-
 # Add default 'system config-management commit-revisions 20'
 
 use strict;
@@ -19,21 +18,16 @@ use File::Copy;
 my $orig_cfg = shift;
 exit 1 unless $orig_cfg;
 
-my $xcp = new XorpConfigParser();
+my $xcp = XorpConfigParser->new();
 $xcp->parse($orig_cfg);
 
-$xcp->set_value(['system', 'config-management', 'commit-revisions'], '20');
+$xcp->set_value( [ 'system', 'config-management', 'commit-revisions' ], '20' );
 
 my $tmpname = "/tmp/vyatta_migrate_content_inspection.$$";
-open (my $tmp, '>', $tmpname)
-    or die "Can't open: $tmpname: $!";
+$xcp->write_file($tmpname)
+  or die "Can't write $tmpname: $!\n";
 
-select $tmp;
-$xcp->output(0);
-select STDOUT;
-close $tmp;
-
-move($tmpname, $orig_cfg)
-    or die "Move $tmpname to $orig_cfg failed: $!";
+move( $tmpname, $orig_cfg )
+  or die "Move $tmpname to $orig_cfg failed: $!\n";
 
 exit 0;
